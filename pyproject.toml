@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fairmeta"
+version = "0.0.1"
+dependencies = [
+    "dotenv",
+    "gcapi",
+    "pydantic",
+    "pytest",
+    "pyyaml",
+    "requests",
+    "sempyro"
+]
+requires-python = ">=3.10"
+authors = [
+    {name = "Yme Kingma", email = "yme.kingma@radboudumc.nl"}
+]
+description = "fairmeta"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["nothing yet"]
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+
+[project.urls]
+Homepage = "https://github.com/YKingma99/FAIRMeta"
+Issues = "https://github.com/YKingma99/FAIRMeta/issues"
+
+[tool.hatch.build]
+packages = ["src/fairmeta"]
