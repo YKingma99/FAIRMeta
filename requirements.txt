@@ -1,0 +1,7 @@
+dotenv
+gcapi
+pydantic
+pytest
+pyyaml
+requests
+sempyro
