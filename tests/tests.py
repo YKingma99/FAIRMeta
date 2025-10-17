@@ -208,7 +208,7 @@ def adapted_instance(target, config, api_data, path, value):
         case "api_data":
             adapted_data = deepcopy(api_data) 
         case _:
-            return MetadataRecord.create_FDP_instance(config, api_data)
+            return MetadataRecord.create_metadata_schema_instance(config, api_data)
     
     d = adapted_data
     for key in path[:-1]:
@@ -216,9 +216,9 @@ def adapted_instance(target, config, api_data, path, value):
     d[path[-1]] = value
     
     if target == "config":
-        return MetadataRecord.create_FDP_instance(adapted_data, api_data)
+        return MetadataRecord.create_metadata_schema_instance(adapted_data, api_data)
     else:
-        return MetadataRecord.create_FDP_instance(config, adapted_data)
+        return MetadataRecord.create_metadata_schema_instance(config, adapted_data)
 
 @pytest.mark.parametrize("target,path,value,exception",[(None, None, None, None), # Tests if everything is correct
                                                         ("config", ("catalog", "dataset", "contact_point"), "not kind or card", AttributeError),
@@ -294,6 +294,8 @@ def test_data_types(target, config, api_data, path, value, exception):
                                                         ("config", ("catalog", "dataset", "theme"), "BAD", ValueError, None),
                                                         ("config", ("catalog", "language"), "Eng", None, None),
                                                         ("config", ("catalog", "language"), "En", ValueError, None),
+                                                        ("config", ("catalog", "language"), "https://example.com", ValueError, None),
+                                                        ("config", ("catalog", "language"), "http://publications.europa.eu/resource/authority/language/anything", None, None),
                                                         ("config", ("catalog", "dataset", "frequency"), "quarterly", None, None),
                                                         ("config", ("catalog", "dataset", "frequency"), "dagelijks", ValueError, None)])
 def test_string_to_enum(target, config, api_data, path, value, exception, message):
@@ -444,7 +446,7 @@ def test_ensure_lists(target, config, api_data, path, value, exception, message)
 @pytest.mark.parametrize("target,path,value,exception",[(None, None, None, None),])
 def test_transformation_hri(target, config, api_data, path, value, exception):
     fdp = adapted_instance(target, config, api_data, path, value)
-    fdp.transform_FDP()
+    fdp.transform_schema()
     disallowed_fields = {"distribution", "dataset"}
     filtered_fields = {k: v for k, v in vars(fdp.catalog).items() if k not in disallowed_fields and v is not None}
     catalog = FDPCatalog(

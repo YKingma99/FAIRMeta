@@ -1,11 +1,18 @@
 from fairmeta.schema_definitions_hri import Agent, Catalog, Dataset, Distribution, Kind
 import logging
-from pydantic import BaseModel, AnyHttpUrl
+from pydantic import BaseModel, AnyHttpUrl, TypeAdapter, ValidationError
 from sempyro.dcat import AccessRights
 from sempyro.hri_dcat import HRIVCard, HRIAgent, DatasetTheme, DatasetStatus, DistributionStatus
 from typing import Optional
 from fairmeta.mappings import themes, access_rights, frequencies, statuses, licenses, distributionstatuses
 import warnings
+
+def is_valid_http_url(value: str) -> bool:
+    try:
+        TypeAdapter(AnyHttpUrl).validate_python(value)
+        return True
+    except ValidationError:
+        return False
 
 class MetadataRecord(BaseModel):
     catalog: Catalog
@@ -13,15 +20,15 @@ class MetadataRecord(BaseModel):
     api_data: Optional[dict] = None
 
     @classmethod
-    def create_FDP_instance(cls, config : dict = None, api_data : dict = None) -> "MetadataRecord":
-        FDP_obj = cls.model_construct(config=config, api_data=api_data)
-        if FDP_obj.config is not None:
-            MetadataRecord._fill_fields(FDP_obj, config)
-            if FDP_obj.api_data is not None:
-                MetadataRecord._populate_FDP(FDP_obj, api_data, config)
-        return FDP_obj
+    def create_metadata_schema_instance(cls, config : dict = None, api_data : dict = None) -> "MetadataRecord":
+        schema_obj = cls.model_construct(config=config, api_data=api_data)
+        if schema_obj.config is not None:
+            MetadataRecord._fill_fields_default(schema_obj, config)
+            if schema_obj.api_data is not None:
+                MetadataRecord._populate_schema(schema_obj, api_data, config)
+        return schema_obj
     
-    def transform_FDP(self):
+    def transform_schema(self):
         """Calls all functions to change fields to Health-RI complient formats"""
         MetadataRecord._ensure_lists(self)
         MetadataRecord._string_to_enum(self)
@@ -39,83 +46,83 @@ class MetadataRecord(BaseModel):
     #     logging.info("Validation successful") 
           
     @staticmethod
-    def _fill_fields(FDP_obj, config: dict | list):
+    def _fill_fields_default(schema_obj, config: dict | list):
         """Recursively fills in the fields from the config file"""
         try:
             for key, value in config.items():
                 if isinstance(value, list):
-                    setattr(FDP_obj, key, value)
+                    setattr(schema_obj, key, value)
                 else:
                     match key:
                         case "catalog":
-                            setattr(FDP_obj, key, Catalog.model_construct())
-                            MetadataRecord._fill_fields(getattr(FDP_obj, key), value)
+                            setattr(schema_obj, key, Catalog.model_construct())
+                            MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "dataset":
-                            setattr(FDP_obj, key, Dataset.model_construct())
-                            MetadataRecord._fill_fields(getattr(FDP_obj, key), value)
+                            setattr(schema_obj, key, Dataset.model_construct())
+                            MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "distribution":
-                            setattr(FDP_obj, key, Distribution.model_construct())
-                            MetadataRecord._fill_fields(getattr(FDP_obj, key), value)
+                            setattr(schema_obj, key, Distribution.model_construct())
+                            MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "creator" | "publisher":
-                            setattr(FDP_obj, key, Agent.model_construct())
-                            MetadataRecord._fill_fields(getattr(FDP_obj, key), value)
+                            setattr(schema_obj, key, Agent.model_construct())
+                            MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "contact_point":
-                            setattr(FDP_obj, key, Kind.model_construct())
-                            MetadataRecord._fill_fields(getattr(FDP_obj, key), value)
+                            setattr(schema_obj, key, Kind.model_construct())
+                            MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "mapping":
                             pass
                         case _:
                             if value:
-                                setattr(FDP_obj, key, value)
+                                setattr(schema_obj, key, value)
         except AttributeError as e:
             print("Likely in one of the fields creator, publisher, or contact_point, something else than a dictionary or list was given")
             raise e
 
     @staticmethod
-    def _populate_FDP(FDP_obj, api_data: dict, config: dict):
+    def _populate_schema(schema_obj, api_data: dict, config: dict):
         """Recursively fills in the fields from the api data"""
         for field, value in config.items():
             match field:
                 case "catalog":
-                    MetadataRecord._populate_FDP(getattr(FDP_obj, field), api_data, value)
+                    MetadataRecord._populate_schema(getattr(schema_obj, field), api_data, value)
                 case "dataset":
-                    MetadataRecord._populate_FDP(getattr(FDP_obj, field), api_data, value)
+                    MetadataRecord._populate_schema(getattr(schema_obj, field), api_data, value)
                 case "distribution":
-                    MetadataRecord._populate_FDP(getattr(FDP_obj, field), api_data, value)
+                    MetadataRecord._populate_schema(getattr(schema_obj, field), api_data, value)
                 case "mapping":
                     if isinstance(value, dict):
                         for api_field, internal_fields in value.items():
                             if api_field in api_data:
                                 for internal_field in internal_fields:
                                     if api_data[api_field]:
-                                        if internal_field == "keyword" and isinstance(FDP_obj.keyword, list):
-                                            setattr(FDP_obj, internal_field, FDP_obj.keyword + api_data[api_field]) # Not using extend here because it changes keyword in config
+                                        if internal_field == "keyword" and isinstance(schema_obj.keyword, list):
+                                            setattr(schema_obj, internal_field, schema_obj.keyword + api_data[api_field]) # Not using extend here because it changes keyword in config
                                         else:
-                                            setattr(FDP_obj, internal_field, api_data[api_field])
+                                            setattr(schema_obj, internal_field, api_data[api_field])
 
     @staticmethod
-    def _ensure_lists(FDP_obj):
+    def _ensure_lists(schema_obj):
         """Changes all fields that need to be lists in the Health-RI metadata schema into lists, and ensures fields that are not allowed to be lists are not"""
-        for field_name, field in FDP_obj.model_fields.items():
-            value = getattr(FDP_obj, field_name)
+        for field_name, field in schema_obj.model_fields.items():
+            value = getattr(schema_obj, field_name)
             if isinstance(value, BaseModel):
                 MetadataRecord._ensure_lists(value)
                 
             is_list_type = 'List' in str(field.annotation)
             if is_list_type and not isinstance(value, list) and value is not None:
-                setattr(FDP_obj, field_name, [value])
+                setattr(schema_obj, field_name, [value])
             elif not is_list_type and isinstance(value, list):
                 if len(value) == 1:
-                    setattr(FDP_obj, field_name, value[0])
+                    setattr(schema_obj, field_name, value[0])
                     warnings.warn(f"Please do not put list in field: {field_name}")
                 else:
                     raise TypeError(f"Found list where it is not supposed to be: {field_name}")
 
     @staticmethod
-    def _string_to_enum(FDP_obj):
+    def _string_to_enum(schema_obj):
         """Changes field values into Health-RI supported categories"""
-        for field_name, _ in FDP_obj.model_fields.items():
-            value = getattr(FDP_obj, field_name)
+        for field_name, _ in schema_obj.model_fields.items():
+            value = getattr(schema_obj, field_name)
             if value:
                 if isinstance(value, BaseModel):
                     MetadataRecord._string_to_enum(value)
@@ -128,42 +135,40 @@ class MetadataRecord(BaseModel):
                 match field_name:
                     case "access_rights":
                         if not isinstance(value, AccessRights):
-                            setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, access_rights))
+                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, access_rights))
                     case "theme":
                         if isinstance(value, list):
                             for position, theme in enumerate(value):
                                 if not isinstance(value[position], DatasetTheme):
                                     value[position] = MetadataRecord._to_enum(theme, themes)
                         else:
-                            if not isinstance(FDP_obj, DatasetTheme):
-                                setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, themes))
+                            if not isinstance(schema_obj, DatasetTheme):
+                                setattr(schema_obj, field_name, MetadataRecord._to_enum(value, themes))
                     case "language":
                         if isinstance(value, list):
                             for position, lang in enumerate(value):
-                                if not isinstance(value[position], AnyHttpUrl):
-                                    value[position] = MetadataRecord._to_enum(lang, field_name)
+                                value[position] = MetadataRecord._to_enum(lang, field_name)
                         else:
-                            if not isinstance(FDP_obj, AnyHttpUrl):
-                                setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, field_name))
+                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))                 
                     case "license":
-                        if not isinstance(value, AnyHttpUrl):
-                            setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, licenses))
+                        if not is_valid_http_url(value):
+                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, licenses))
                     case "legal_basis":
                         if isinstance(value, list):
                             for position, basis in enumerate(value):
-                                if not isinstance(value[position], AnyHttpUrl):
-                                    value[position] = MetadataRecord._to_enum(value, field_name)
+                                if not is_valid_http_url(value[position]):
+                                    value[position] = MetadataRecord._to_enum(basis, field_name)
                         else:
-                            if not isinstance(value, AnyHttpUrl):
-                                setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, field_name))
+                            if not is_valid_http_url(value):
+                                setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))
                     case "status":
                         if not isinstance(value, DatasetStatus):
-                            setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, statuses))
+                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, statuses))
                     case "spatial":
                         pass
                     case "frequency":
-                        if not isinstance(FDP_obj, AnyHttpUrl):
-                            setattr(FDP_obj, field_name, MetadataRecord._to_enum(value, frequencies))
+                        if not is_valid_http_url(schema_obj):
+                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, frequencies))
                     case _:
                         pass
 
@@ -182,10 +187,16 @@ class MetadataRecord(BaseModel):
         
     @staticmethod
     def _language_transformation(value):
-        if len(value) >= 3:
-            return f"http://publications.europa.eu/resource/authority/language/{value[:3].upper()}"
+        if not is_valid_http_url(value):
+            if len(value) >= 3:
+                return f"http://publications.europa.eu/resource/authority/language/{value[:3].upper()}"
+            else:
+                raise ValueError("Provide at least 3 characters for language")
         else:
-            raise ValueError("Provide at least 3 characters for language")
+            if not "http://publications.europa.eu/resource/authority/language/" in value:
+                raise ValueError(f"Language should be in the form: http://publications.europa.eu/resource/authority/language/<code> not {value}")
+            else:
+                return value
     
     @staticmethod
     def _legal_basis_transformation(value):
@@ -228,12 +239,12 @@ class MetadataRecord(BaseModel):
     #     return -1
 
     @staticmethod
-    def _agent_to_HRIAgent(FDP_obj):
+    def _agent_to_HRIAgent(schema_obj):
         """Changes Agents into Health-RI Agents"""
-        for field_name, _ in FDP_obj.model_fields.items():
-            value = getattr(FDP_obj, field_name)
+        for field_name, _ in schema_obj.model_fields.items():
+            value = getattr(schema_obj, field_name)
             if isinstance(value, Agent):
-                setattr(FDP_obj, field_name, MetadataRecord._create_HRIAgent(value)) 
+                setattr(schema_obj, field_name, MetadataRecord._create_HRIAgent(value)) 
                 
             elif isinstance(value, list) and any(isinstance(v, Agent) for v in value):
                 new_agents = []
@@ -244,7 +255,7 @@ class MetadataRecord(BaseModel):
                         new_agents.append(agent)
                     else:
                         raise ValueError("Encountered not Agent or HRIAgent in list")
-                setattr(FDP_obj, field_name, new_agents)
+                setattr(schema_obj, field_name, new_agents)
 
             elif isinstance(value, BaseModel):
                 MetadataRecord._agent_to_HRIAgent(value)    
@@ -272,12 +283,12 @@ class MetadataRecord(BaseModel):
         return HRIAgent(**kwargs)
 
     @staticmethod
-    def _kind_to_HRIVCard(FDP_obj):
+    def _kind_to_HRIVCard(schema_obj):
         """Changes kinds into Health-RI VCards"""
-        for field_name, _ in FDP_obj.model_fields.items():
-            value = getattr(FDP_obj, field_name)
+        for field_name, _ in schema_obj.model_fields.items():
+            value = getattr(schema_obj, field_name)
             if isinstance(value, Kind):
-                setattr(FDP_obj, field_name, MetadataRecord._create_HRIVCard(value))
+                setattr(schema_obj, field_name, MetadataRecord._create_HRIVCard(value))
             elif isinstance(value, list) and any(isinstance(v, Kind) for v in value):
                 new_card = []
                 for kind in value:
@@ -287,7 +298,7 @@ class MetadataRecord(BaseModel):
                         new_card.append(kind)
                     else:
                         raise ValueError("Encountered not Kind or VCard in list")
-                setattr(FDP_obj, field_name, new_card)
+                setattr(schema_obj, field_name, new_card)
 
             elif isinstance(value, BaseModel):
                 MetadataRecord._kind_to_HRIVCard(value)

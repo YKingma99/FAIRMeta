@@ -1,5 +1,5 @@
 # FAIRMeta
-fairmeta module. Made using Python 3.12.3
+FAIRMeta module. Made using Python 3.12.3
 
 ## Usage:
 ```shell

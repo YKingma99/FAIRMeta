@@ -9,7 +9,6 @@ dependencies = [
     "dotenv",
     "gcapi",
     "pydantic",
-    "pytest",
     "pyyaml",
     "requests",
     "sempyro"
@@ -24,7 +23,13 @@ license = "MIT"
 license-files = ["LICENSE"]
 keywords = ["nothing yet"]
 classifiers = [
-    "Programming Language :: Python :: 3"
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest"
 ]
 
 [project.urls]

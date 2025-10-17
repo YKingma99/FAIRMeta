@@ -35,10 +35,10 @@ if __name__=="__main__":
         case _:
             raise ValueError(f"Unsupported platform: {args.platform}. Pick from: {', '.join(platforms.keys())}")
 
-    data = MetadataRecord.create_FDP_instance(config=config, api_data=api_data)
+    data = MetadataRecord.create_metadata_schema_instance(config=config, api_data=api_data)
     logging.info("Validating relaxed metadata schema")
     data.validate()
-    MetadataRecord.transform_FDP(data)
+    MetadataRecord.transform_schema(data)
     logging.info("Validating strict metadata schema")
     data.validate()
 
