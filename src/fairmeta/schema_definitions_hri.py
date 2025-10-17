@@ -33,11 +33,11 @@ class PeriodOfTime(BaseModel):
 
 # Main classes
 class Distribution(BaseModel):
-    access_url: str
+    access_url: AnyHttpUrl
     byte_size: int
-    format: str
-    license: str
-    rights: str
+    format: str | AnyHttpUrl
+    license: str | AnyHttpUrl
+    rights: AnyHttpUrl
 
     # access_service: Optional[AnyHttpUrl | DataService] = None
     applicable_legislation: Optional[str | AnyHttpUrl | List[str | AnyHttpUrl]] = None
@@ -102,7 +102,7 @@ class Dataset(BaseModel):
     number_of_records: Optional[int] = None
     number_of_unique_individuals: Optional[int] = None
     # other_identifier: Optional[Identifier | List[Identifier]] = None
-    personal_data: Optional[AnyHttpUrl | List[AnyHttpUrl]] = None
+    personal_data: Optional[str | AnyHttpUrl | List[str | AnyHttpUrl]] = None
     population_coverage: Optional[str] = None # Cardinality 0..* but doesn't allow for lists
     purpose: Optional[AnyHttpUrl | List[AnyHttpUrl]] = None
     # qualified_attribution: Optional[AnyHttpUrl | Attribution | List[AnyHttpUrl | Attribution]] = None

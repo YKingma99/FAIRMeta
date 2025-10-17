@@ -136,6 +136,8 @@ class MetadataRecord(BaseModel):
                     case "access_rights":
                         if not isinstance(value, AccessRights):
                             setattr(schema_obj, field_name, MetadataRecord._to_enum(value, access_rights))
+                    case "format":
+                        setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))
                     case "theme":
                         if isinstance(value, list):
                             for position, theme in enumerate(value):
@@ -143,24 +145,16 @@ class MetadataRecord(BaseModel):
                                     value[position] = MetadataRecord._to_enum(theme, themes)
                         else:
                             if not isinstance(schema_obj, DatasetTheme):
-                                setattr(schema_obj, field_name, MetadataRecord._to_enum(value, themes))
-                    case "language":
-                        if isinstance(value, list):
-                            for position, lang in enumerate(value):
-                                value[position] = MetadataRecord._to_enum(lang, field_name)
-                        else:
-                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))                 
+                                setattr(schema_obj, field_name, MetadataRecord._to_enum(value, themes))                 
                     case "license":
                         if not is_valid_http_url(value):
                             setattr(schema_obj, field_name, MetadataRecord._to_enum(value, licenses))
-                    case "legal_basis":
+                    case "language" | "legal_basis" | "personal_data" | "purpose":
                         if isinstance(value, list):
-                            for position, basis in enumerate(value):
-                                if not is_valid_http_url(value[position]):
-                                    value[position] = MetadataRecord._to_enum(basis, field_name)
+                            for position, variable in enumerate(value):
+                                value[position] = MetadataRecord._to_enum(variable, field_name)
                         else:
-                            if not is_valid_http_url(value):
-                                setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))
+                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))
                     case "status":
                         if not isinstance(value, DatasetStatus):
                             setattr(schema_obj, field_name, MetadataRecord._to_enum(value, statuses))
@@ -175,10 +169,16 @@ class MetadataRecord(BaseModel):
     @staticmethod
     def _to_enum(value, kind):
         match kind:
+            case "format":
+                return MetadataRecord._format_transformation(value)
             case "language":
                 return MetadataRecord._language_transformation(value)
             case "legal_basis":
                 return MetadataRecord._legal_basis_transformation(value)
+            case "personal_data":
+                return MetadataRecord._personal_data_transformation(value)
+            case "purpose":
+                return MetadataRecord._purpose_transformation(value)
             case _:
                 try:
                     return kind[value.lower()]
@@ -186,12 +186,25 @@ class MetadataRecord(BaseModel):
                     raise ValueError(f"{value} incorrect or not supported. Supported values: {', '.join(kind.keys())}")
         
     @staticmethod
+    def _format_transformation(value):
+        if not is_valid_http_url(value):
+            return f"http://publications.europa.eu/resource/authority/file-type/{value}"
+        else:
+            if not "http://publications.europa.eu/resource/authority/file-type/" in value:
+                raise ValueError(f"Format should be in the form: http://publications.europa.eu/resource/authority/file-type/<code> not {value}")
+            else:
+                return value
+
+    @staticmethod
     def _language_transformation(value):
         if not is_valid_http_url(value):
-            if len(value) >= 3:
-                return f"http://publications.europa.eu/resource/authority/language/{value[:3].upper()}"
-            else:
-                raise ValueError("Provide at least 3 characters for language")
+            match value.lower():
+                case "nederlands" | "dutch" | "ned":
+                    return "http://publications.europa.eu/resource/authority/language/NED"
+                case "english" | "engels" | "eng":
+                    return "http://publications.europa.eu/resource/authority/language/ENG"
+                case _:
+                    raise ValueError("For language: either provide 'ned' or 'eng', or in the form http://publications.europa.eu/resource/authority/language/<code>")
         else:
             if not "http://publications.europa.eu/resource/authority/language/" in value:
                 raise ValueError(f"Language should be in the form: http://publications.europa.eu/resource/authority/language/<code> not {value}")
@@ -200,7 +213,24 @@ class MetadataRecord(BaseModel):
     
     @staticmethod
     def _legal_basis_transformation(value):
-        return f"https://w3id.org/dpv#{value}"
+        if not is_valid_http_url(value):
+            return f"https://w3id.org/dpv#{value}"
+        else:
+            return value
+        
+    @staticmethod
+    def _personal_data_transformation(value):
+        if not is_valid_http_url(value):
+            return f"https://w3id.org/dpv/pd#{value}"
+        else:
+            return value
+        
+    @staticmethod
+    def _purpose_transformation(value):
+        if not is_valid_http_url(value):
+            return f"https://w3id.org/dpv#{value}"
+        else:
+            return value
 
     # @staticmethod
     # def _language_to_enum(lang: str) -> str:
