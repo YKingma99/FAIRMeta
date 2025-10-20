@@ -132,39 +132,36 @@ class MetadataRecord(BaseModel):
                         if isinstance(v, BaseModel):
                             MetadataRecord._string_to_enum(v)
 
-                match field_name:
-                    case "access_rights":
-                        if not isinstance(value, AccessRights):
-                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, access_rights))
-                    case "format":
+                dict_backed = {
+                    "access_rights": access_rights,
+                    "theme": themes,
+                    "license": licenses,
+                    "status": statuses,
+                    "frequency": frequencies,
+                }
+                transformer_backed = {"format", "language", "legal_basis", "personal_data", "purpose"}
+
+                if field_name in dict_backed:
+                    kind = dict_backed[field_name]
+                    if isinstance(value, list):
+                        for i, v in enumerate(value):
+                            print(v)
+                            value[i] = MetadataRecord._to_enum(v, kind)
+                    else:
+                        setattr(schema_obj, field_name, MetadataRecord._to_enum(value, kind))
+
+                elif field_name in transformer_backed:
+                    if isinstance(value, list):
+                        for i, v in enumerate(value):
+                            value[i] = MetadataRecord._to_enum(v, field_name)
+                    else:
                         setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))
-                    case "theme":
-                        if isinstance(value, list):
-                            for position, theme in enumerate(value):
-                                if not isinstance(value[position], DatasetTheme):
-                                    value[position] = MetadataRecord._to_enum(theme, themes)
-                        else:
-                            if not isinstance(schema_obj, DatasetTheme):
-                                setattr(schema_obj, field_name, MetadataRecord._to_enum(value, themes))                 
-                    case "license":
-                        if not is_valid_http_url(value):
-                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, licenses))
-                    case "language" | "legal_basis" | "personal_data" | "purpose":
-                        if isinstance(value, list):
-                            for position, variable in enumerate(value):
-                                value[position] = MetadataRecord._to_enum(variable, field_name)
-                        else:
-                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, field_name))
-                    case "status":
-                        if not isinstance(value, DatasetStatus):
-                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, statuses))
-                    case "spatial":
-                        pass
-                    case "frequency":
-                        if not is_valid_http_url(schema_obj):
-                            setattr(schema_obj, field_name, MetadataRecord._to_enum(value, frequencies))
-                    case _:
-                        pass
+
+                elif field_name == "spatial":
+                    pass
+
+                else:
+                    pass
 
     @staticmethod
     def _to_enum(value, kind):
@@ -183,7 +180,8 @@ class MetadataRecord(BaseModel):
                 try:
                     return kind[value.lower()]
                 except:
-                    raise ValueError(f"{value} incorrect or not supported. Supported values: {', '.join(kind.keys())}")
+                    if not value in kind.values():
+                        raise ValueError(f"{value} incorrect or not supported. Supported values: {', '.join(kind.keys())}")
         
     @staticmethod
     def _format_transformation(value):
@@ -231,42 +229,6 @@ class MetadataRecord(BaseModel):
             return f"https://w3id.org/dpv#{value}"
         else:
             return value
-
-    # @staticmethod
-    # def _language_to_enum(lang: str) -> str:
-    #     try:
-    #         return lang_map[lang.lower()]
-    #     except:
-    #         raise ValueError(f"Language code: {lang} incorrect or not supported")
-            
-    # @staticmethod
-    # def _access_rights_to_enum(access_rights: str) -> AccessRights:
-    #     match access_rights.lower():
-    #         case "public":
-    #             return AccessRights.public
-    #         case "non-public":
-    #             return AccessRights.non_public
-    #         case "restricted":
-    #             return AccessRights.restricted
-    #         case _:
-    #             raise ValueError(f"Access right: {access_rights} incorrect or not supported")
-            
-    # @staticmethod
-    # def _theme_to_enum(theme: str) -> DatasetTheme:
-    #     match theme.lower():
-    #         case "heal":
-    #             return DatasetTheme.heal
-    #         case _:
-    #             raise ValueError("Theme: " + theme + " incorrect or not supported")
-
-    # Investigate if necessary
-    # @staticmethod
-    # def _license_to_enum(license: str):
-    #     return -1
-
-    # @staticmethod
-    # def _format_to_enum(format: str):
-    #     return -1
 
     @staticmethod
     def _agent_to_HRIAgent(schema_obj):

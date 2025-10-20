@@ -6,7 +6,7 @@ access_rights = {right.name: right for right in AccessRights}
 
 distributionstatuses = {status.name: status for status in DistributionStatus}
 
-frequencies = {frequency.name: frequency for frequency in Frequency}
+frequencies = {frequency.name.lower(): frequency for frequency in Frequency}
 
 licenses = {lic.name: lic.value for lic in GeonovumLicences}
 
