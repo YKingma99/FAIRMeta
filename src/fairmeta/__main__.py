@@ -1,6 +1,6 @@
-from fairmeta.metadata_model import MetadataRecord
-from fairmeta.gatherers.gather_GC import GrandChallenge
-from fairmeta.uploader_radboudfdp import RadboudFDP
+from .metadata_model import MetadataRecord
+from .gatherers import GrandChallenge
+from .uploader_radboudfdp import RadboudFDP
 import argparse
 import yaml
 import logging
@@ -13,7 +13,7 @@ parser.add_argument('catalog_name', help="Name of catalog in FDP")
 parser.add_argument('--test', action='store_true', help="Run in test mode")
 parser.add_argument('--verbose', action='store_true', help="Verbose logging") 
 
-if __name__=="__main__":
+def main():
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -27,7 +27,7 @@ if __name__=="__main__":
     platforms = config_data["platforms"]
 
     logging.info(f"Fetching data from platform: {args.platform}")
-    match args.platform:
+    match args.platform.lower():
         case "grand_challenge":
             config = platforms["grand_challenge"]
             platform = GrandChallenge()
@@ -47,3 +47,6 @@ if __name__=="__main__":
 
     logging.info("Done")
 
+
+if __name__=="__main__":
+    main()

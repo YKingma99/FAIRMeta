@@ -1,13 +1,12 @@
-from fairmeta.schema_definitions_hri import Agent, Catalog, Dataset, Distribution, Kind
+from .schema_definitions_hri import Agent, Catalog, Dataset, Distribution, Kind
 import logging
 from pydantic import BaseModel, AnyHttpUrl, TypeAdapter, ValidationError
-from sempyro.dcat import AccessRights
-from sempyro.hri_dcat import HRIVCard, HRIAgent, DatasetTheme, DatasetStatus, DistributionStatus
+from sempyro.hri_dcat import HRIVCard, HRIAgent
 from typing import Optional
-from fairmeta.mappings import themes, access_rights, frequencies, statuses, licenses, distributionstatuses
+from .mappings import themes, access_rights, frequencies, statuses, licenses#, distributionstatuses
 import warnings
 
-def is_valid_http_url(value: str) -> bool:
+def _is_valid_http_url(value: str) -> bool:
     try:
         TypeAdapter(AnyHttpUrl).validate_python(value)
         return True
@@ -145,7 +144,6 @@ class MetadataRecord(BaseModel):
                     kind = dict_backed[field_name]
                     if isinstance(value, list):
                         for i, v in enumerate(value):
-                            print(v)
                             value[i] = MetadataRecord._to_enum(v, kind)
                     else:
                         setattr(schema_obj, field_name, MetadataRecord._to_enum(value, kind))
@@ -185,7 +183,7 @@ class MetadataRecord(BaseModel):
         
     @staticmethod
     def _format_transformation(value):
-        if not is_valid_http_url(value):
+        if not _is_valid_http_url(value):
             return f"http://publications.europa.eu/resource/authority/file-type/{value}"
         else:
             if not "http://publications.europa.eu/resource/authority/file-type/" in value:
@@ -195,7 +193,7 @@ class MetadataRecord(BaseModel):
 
     @staticmethod
     def _language_transformation(value):
-        if not is_valid_http_url(value):
+        if not _is_valid_http_url(value):
             match value.lower():
                 case "nederlands" | "dutch" | "ned":
                     return "http://publications.europa.eu/resource/authority/language/NED"
@@ -211,21 +209,21 @@ class MetadataRecord(BaseModel):
     
     @staticmethod
     def _legal_basis_transformation(value):
-        if not is_valid_http_url(value):
+        if not _is_valid_http_url(value):
             return f"https://w3id.org/dpv#{value}"
         else:
             return value
         
     @staticmethod
     def _personal_data_transformation(value):
-        if not is_valid_http_url(value):
+        if not _is_valid_http_url(value):
             return f"https://w3id.org/dpv/pd#{value}"
         else:
             return value
         
     @staticmethod
     def _purpose_transformation(value):
-        if not is_valid_http_url(value):
+        if not _is_valid_http_url(value):
             return f"https://w3id.org/dpv#{value}"
         else:
             return value

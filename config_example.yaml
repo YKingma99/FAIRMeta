@@ -1,5 +1,5 @@
 platforms:
-  grand_challenge:
+  platform1:
     catalog:
       mapping: 
         api_name_for_catalog_description: [description] # Can map to multiple fields
@@ -11,6 +11,5 @@ platforms:
       dataset:
         mapping: 
           api_name_for_dataset_title: [title]
-          # challenge_url: [identifier]
         access_rights: non_public
         keyword: [keyword1, keyword2] # These keywords will be extended by the keywords from the API (if applicable), not replaced.

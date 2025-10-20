@@ -41,3 +41,6 @@ Issues = "https://github.com/YKingma99/FAIRMeta/issues"
 
 [tool.hatch.build]
 packages = ["src/fairmeta"]
+
+[project.scripts]
+fairmeta = "fairmeta.__main__:main"
