@@ -21,13 +21,14 @@ description = "fairmeta"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-keywords = ["nothing yet"]
+keywords = ["fair", "metadata", "metadata-model", "fdp", "pydantic", "rdf", "dcat", "schema-transformation"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12"
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis"
 ]
 
 [project.optional-dependencies]
