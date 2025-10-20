@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import requests
 from urllib.parse import urlparse, urlunparse
-from fairmeta.metadata_model import MetadataRecord
+from .metadata_model import MetadataRecord
 from pydantic import AnyHttpUrl, Field
 from sempyro.hri_dcat import HRICatalog, HRIDataset, HRIDistribution
 from rdflib import DCTERMS, URIRef
