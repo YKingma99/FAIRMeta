@@ -2,7 +2,7 @@ from .schema_definitions_hri import Agent, Catalog, Dataset, Distribution, Kind
 import logging
 from pydantic import BaseModel, AnyHttpUrl, TypeAdapter, ValidationError
 from sempyro.hri_dcat import HRIVCard, HRIAgent
-from typing import Optional
+from typing import List, Optional
 from .mappings import themes, access_rights, frequencies, statuses, licenses#, distributionstatuses
 import warnings
 
@@ -15,16 +15,18 @@ def _is_valid_http_url(value: str) -> bool:
 
 class MetadataRecord(BaseModel):
     catalog: Catalog
-    config: Optional[dict] = None
+    config: Optional[List[dict]] = None
     api_data: Optional[dict] = None
 
     @classmethod
-    def create_metadata_schema_instance(cls, config : dict = None, api_data : dict = None) -> "MetadataRecord":
-        schema_obj = cls.model_construct(config=config, api_data=api_data)
+    def create_metadata_schema_instance(cls, configs : list = None, api_data : dict = None) -> "MetadataRecord":
+        """Fills the metadata schema using configs and API data"""
+        schema_obj = cls.model_construct(config=configs, api_data=api_data)
         if schema_obj.config is not None:
-            MetadataRecord._fill_fields_default(schema_obj, config)
-            if schema_obj.api_data is not None:
-                MetadataRecord._populate_schema(schema_obj, api_data, config)
+            for config in schema_obj.config:
+                MetadataRecord._fill_fields_default(schema_obj, config)
+        if schema_obj.api_data is not None:
+            MetadataRecord._populate_schema(schema_obj, api_data, schema_obj.config[0])
         return schema_obj
     
     def transform_schema(self):
@@ -50,32 +52,51 @@ class MetadataRecord(BaseModel):
         try:
             for key, value in config.items():
                 if isinstance(value, list):
-                    setattr(schema_obj, key, value)
+                    match key:
+                        case "keyword":
+                            setattr(schema_obj, key, getattr(schema_obj, key) + value)
+                        case _:
+                            setattr(schema_obj, key, value)
                 else:
                     match key:
                         case "catalog":
-                            setattr(schema_obj, key, Catalog.model_construct())
+                            if not hasattr(schema_obj, key):
+                                setattr(schema_obj, key, Catalog.model_construct())
                             MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "dataset":
-                            setattr(schema_obj, key, Dataset.model_construct())
+                            if not hasattr(schema_obj, key):
+                                setattr(schema_obj, key, Dataset.model_construct())
                             MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "distribution":
-                            setattr(schema_obj, key, Distribution.model_construct())
+                            if not hasattr(schema_obj, key) or getattr(schema_obj, key) == None:
+                                setattr(schema_obj, key, Distribution.model_construct())
                             MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "creator" | "publisher":
-                            setattr(schema_obj, key, Agent.model_construct())
+                            if not hasattr(schema_obj, key) or getattr(schema_obj, key) == None:
+                                setattr(schema_obj, key, Agent.model_construct())
                             MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "contact_point":
-                            setattr(schema_obj, key, Kind.model_construct())
+                            if not hasattr(schema_obj, key) or getattr(schema_obj, key) == None:
+                                setattr(schema_obj, key, Kind.model_construct())
                             MetadataRecord._fill_fields_default(getattr(schema_obj, key), value)
                         case "mapping":
                             pass
                         case _:
                             if value:
-                                setattr(schema_obj, key, value)
+                                try:
+                                    v = getattr(schema_obj, key)
+                                    if v == None:
+                                        raise AttributeError
+                                    else:
+                                        warnings.warn(f"Field value overwritten: {key}: {getattr(schema_obj, key)} with {value}")
+                                        raise AttributeError
+                                except AttributeError:
+                                    setattr(schema_obj, key, value)
+
         except AttributeError as e:
             print("Likely in one of the fields creator, publisher, or contact_point, something else than a dictionary or list was given")
             raise e
+
 
     @staticmethod
     def _populate_schema(schema_obj, api_data: dict, config: dict):
@@ -99,6 +120,7 @@ class MetadataRecord(BaseModel):
                                         else:
                                             setattr(schema_obj, internal_field, api_data[api_field])
 
+
     @staticmethod
     def _ensure_lists(schema_obj):
         """Changes all fields that need to be lists in the Health-RI metadata schema into lists, and ensures fields that are not allowed to be lists are not"""
@@ -116,6 +138,7 @@ class MetadataRecord(BaseModel):
                     warnings.warn(f"Please do not put list in field: {field_name}")
                 else:
                     raise TypeError(f"Found list where it is not supposed to be: {field_name}")
+
 
     @staticmethod
     def _string_to_enum(schema_obj):
@@ -161,6 +184,7 @@ class MetadataRecord(BaseModel):
                 else:
                     pass
 
+
     @staticmethod
     def _to_enum(value, kind):
         match kind:
@@ -181,6 +205,7 @@ class MetadataRecord(BaseModel):
                     if not value in kind.values():
                         raise ValueError(f"{value} incorrect or not supported. Supported values: {', '.join(kind.keys())}")
         
+
     @staticmethod
     def _format_transformation(value):
         if not _is_valid_http_url(value):
@@ -190,6 +215,7 @@ class MetadataRecord(BaseModel):
                 raise ValueError(f"Format should be in the form: http://publications.europa.eu/resource/authority/file-type/<code> not {value}")
             else:
                 return value
+
 
     @staticmethod
     def _language_transformation(value):
@@ -206,6 +232,7 @@ class MetadataRecord(BaseModel):
                 raise ValueError(f"Language should be in the form: http://publications.europa.eu/resource/authority/language/<code> not {value}")
             else:
                 return value
+    
     
     @staticmethod
     def _legal_basis_transformation(value):

@@ -47,9 +47,9 @@ def test_metadata_model_creation(target, config, api_data, path, value, exceptio
                 assert schema.api_data == api_data                
             case "api_data":
                 target, _ = resolve_path(schema, path, target, config)
-                assert schema.config == config
+                assert schema.config == [config]
             case _:
-                assert schema.config == config
+                assert schema.config == [config]
                 assert schema.api_data == api_data       
         if value:
             assert target == value
@@ -260,3 +260,10 @@ def test_transformation_hri(target, config, api_data, path, value, exception):
             hri_distribution = HRIDistribution(
                 **filtered_fields
             )
+
+@pytest.mark.parametrize("target,path,value",[("multi_conf", None, None)])
+def test_extra_configs(target, config, api_data, path, value, extra_config):
+    """Tests if multiple config files are handled correctly"""
+    schema = adapted_instance(target, config, api_data, path, value, extra_config)
+    assert schema.catalog.dataset.keyword == ["Test platform", "CT", "Prostate", "Medical", "keyword2"]
+    assert schema.catalog.dataset.maximum_typical_age == extra_config["catalog"]["dataset"]["maximum_typical_age"]

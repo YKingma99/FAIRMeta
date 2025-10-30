@@ -74,7 +74,7 @@ class Dataset(BaseModel):
     contact_point: Kind | HRIVCard
     creator: Agent | HRIAgent | List[Agent | HRIAgent]
     identifier: str
-    keyword: List[str]
+    keyword: List[str] = []
     publisher: Agent | HRIAgent
     theme: str | DatasetTheme | List[str | DatasetTheme]
     applicable_legislation: AnyHttpUrl | List[AnyHttpUrl]

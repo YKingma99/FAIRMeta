@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 import requests
 from urllib.parse import urlparse, urlunparse
 from .metadata_model import MetadataRecord
@@ -17,16 +16,19 @@ class FDPCatalog(HRICatalog):
         })
 
 class RadboudFDP:
-    def __init__(self, test=False):
-        load_dotenv()
+    def __init__(self, test=False, token=None):
         self.test = test
-        self.FDP_key = os.getenv("Radboud_FDP_key")
+        if token:
+            self.FDP_key = token
+        else:
+            self.FDP_key = os.getenv("Radboud_FDP_key")
         self.base_url = "https://fdp.radboudumc.nl"
         if test:
             self.post_url = "https://fdp.radboudumc.nl/acc"
         else:
             self.post_url = self.base_url
         
+
     def create_and_publish(self, FDP: MetadataRecord, catalog_name: str):
         """Uploads an FDP object to Radboud FDP"""
         disallowed_fields = {"distribution", "dataset"}
@@ -69,6 +71,7 @@ class RadboudFDP:
 
         self._publish(fdp_catalog_url)
 
+
     def _post(self, turtle, location) -> str:
         url = f"{self.post_url}/{location}"
         headers = {
@@ -79,6 +82,7 @@ class RadboudFDP:
         logging.info(f"Posting: {location}, response (should be 201): {rsp}")
         return rsp.headers["Location"]
     
+
     def _publish(self, url):
         if self.test:
             parsed = urlparse(url)
@@ -96,3 +100,19 @@ class RadboudFDP:
         }
         rsp = requests.put(url=publish_url, headers=headers, json=json_data)
         logging.info(f"Published, this should be 200: {rsp}")
+
+
+    def _update(self, turtle, url) -> str:
+        if self.test:
+            parsed = urlparse(url)
+            new_path = "/acc" + parsed.path
+            url = urlunparse(parsed._replace(path=new_path))
+                    
+        headers = {
+            'Authorization': f'Bearer {self.FDP_key}',
+            'Content-Type': 'text/turtle'
+        }
+
+        rsp = requests.put(url, headers=headers, data=turtle, allow_redirects=True)
+        logging.info(f"Posting: {"dataset"}, response (should be 200): {rsp}")
+        return rsp.headers["Location"]
