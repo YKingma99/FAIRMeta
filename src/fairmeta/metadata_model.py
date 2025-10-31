@@ -23,10 +23,13 @@ class MetadataRecord(BaseModel):
         """Fills the metadata schema using configs and API data"""
         schema_obj = cls.model_construct(config=configs, api_data=api_data)
         if schema_obj.config is not None:
+            if not isinstance(schema_obj.config, list):
+                schema_obj.config = [schema_obj.config]
             for config in schema_obj.config:
                 MetadataRecord._fill_fields_default(schema_obj, config)
-        if schema_obj.api_data is not None:
-            MetadataRecord._populate_schema(schema_obj, api_data, schema_obj.config[0])
+            if schema_obj.api_data is not None:
+                for config in schema_obj.config:
+                    MetadataRecord._populate_schema(schema_obj, api_data, config)
         return schema_obj
     
     def transform_schema(self):
@@ -47,7 +50,7 @@ class MetadataRecord(BaseModel):
     #     logging.info("Validation successful") 
           
     @staticmethod
-    def _fill_fields_default(schema_obj, config: dict | list):
+    def _fill_fields_default(schema_obj, config: dict):
         """Recursively fills in the fields from the config file"""
         try:
             for key, value in config.items():
@@ -221,12 +224,12 @@ class MetadataRecord(BaseModel):
     def _language_transformation(value):
         if not _is_valid_http_url(value):
             match value.lower():
-                case "nederlands" | "dutch" | "ned":
-                    return "http://publications.europa.eu/resource/authority/language/NED"
+                case "nederlands" | "dutch" | "nld":
+                    return "http://publications.europa.eu/resource/authority/language/NLD"
                 case "english" | "engels" | "eng":
                     return "http://publications.europa.eu/resource/authority/language/ENG"
                 case _:
-                    raise ValueError("For language: either provide 'ned' or 'eng', or in the form http://publications.europa.eu/resource/authority/language/<code>")
+                    raise ValueError("For language: either provide 'nld' or 'eng', or in the form http://publications.europa.eu/resource/authority/language/<code>")
         else:
             if not "http://publications.europa.eu/resource/authority/language/" in value:
                 raise ValueError(f"Language should be in the form: http://publications.europa.eu/resource/authority/language/<code> not {value}")

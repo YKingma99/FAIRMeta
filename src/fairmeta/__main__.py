@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-c', '--config', help="YAML configuration file(s)", nargs='+', required=True)
+parser.add_argument('-c', '--config', help="YAML configuration file(s)", action='append', required=True)
 parser.add_argument('platform', help="Platform to fetch metadata from")
 parser.add_argument('slug', help="Unique identifier of dataset")
 parser.add_argument('catalog_name', help="Name of catalog in FDP")
-parser.add_argument('-t', '--test', action='store_true', help="Run in test mode")
+parser.add_argument('--test', action='store_true', help="Run in test mode")
 parser.add_argument('-v', '--verbose', action='store_true', help="Verbose logging") 
 
 def main():
@@ -40,7 +40,7 @@ def main():
         case _:
             raise ValueError(f"Unsupported platform: {args.platform}. Pick from: {', '.join(platforms.keys())}")
 
-    data = MetadataRecord.create_metadata_schema_instance(config=config, api_data=api_data)
+    data = MetadataRecord.create_metadata_schema_instance(configs=config, api_data=api_data)
     logging.info("Validating relaxed metadata schema")
     data.validate()
     MetadataRecord.transform_schema(data)

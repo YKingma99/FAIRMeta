@@ -4,7 +4,7 @@ from urllib.parse import urlparse, urlunparse
 from .metadata_model import MetadataRecord
 from pydantic import AnyHttpUrl, Field
 from sempyro.hri_dcat import HRICatalog, HRIDataset, HRIDistribution
-from rdflib import DCTERMS, URIRef
+from rdflib import DCTERMS, URIRef, Graph
 import logging
 
 class FDPCatalog(HRICatalog):
@@ -79,6 +79,7 @@ class RadboudFDP:
             'Content-Type': 'text/turtle'
         }
         rsp = requests.post(url, headers=headers, data=turtle, allow_redirects=True)
+        rsp.raise_for_status()
         logging.info(f"Posting: {location}, response (should be 201): {rsp}")
         return rsp.headers["Location"]
     
@@ -99,20 +100,45 @@ class RadboudFDP:
             'current': 'PUBLISHED'
         }
         rsp = requests.put(url=publish_url, headers=headers, json=json_data)
+        rsp.raise_for_status()
         logging.info(f"Published, this should be 200: {rsp}")
 
 
-    def _update(self, turtle, url) -> str:
+    def update_catalog(self, metadata_record: MetadataRecord, url):
+        graph_url = url
         if self.test:
             parsed = urlparse(url)
             new_path = "/acc" + parsed.path
             url = urlunparse(parsed._replace(path=new_path))
-                    
+
         headers = {
             'Authorization': f'Bearer {self.FDP_key}',
             'Content-Type': 'text/turtle'
         }
 
+        current = requests.get(url, headers={'Accept': 'text/turtle'})
+        current.raise_for_status()
+
+        g = Graph()
+        g.parse(data=current.text, format='turtle')
+        dataset = []
+        for _, p, o in g:
+            if "http://www.w3.org/ns/dcat#dataset" in p:
+                dataset.append(o)
+        
+        FDP = metadata_record
+        disallowed_fields = {"distribution", "dataset"}
+        filtered_fields = {k: v for k, v in vars(FDP.catalog).items() if k not in disallowed_fields and v is not None}
+        catalog = FDPCatalog(
+            is_part_of=[URIRef(self.base_url)],
+            dataset = [],
+            **filtered_fields
+        )
+
+        catalog.dataset = dataset
+        record = catalog.to_graph(URIRef(f"{graph_url}"))
+        turtle = record.serialize(format="turtle")
+
         rsp = requests.put(url, headers=headers, data=turtle, allow_redirects=True)
-        logging.info(f"Posting: {"dataset"}, response (should be 200): {rsp}")
-        return rsp.headers["Location"]
+        rsp.raise_for_status()
+        logging.info(f"Updating: catalog, response (should be 200): {rsp}")

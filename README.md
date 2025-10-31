@@ -3,5 +3,5 @@ FAIRMeta package.
 
 ## Usage:
 ```shell
-fairmeta -c config.yaml platform identifier name_in_fdp
+fairmeta [--test] -c config.yaml platform identifier name_in_fdp
 ```
