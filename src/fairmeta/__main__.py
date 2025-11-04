@@ -29,18 +29,25 @@ def main():
     for c in args.config:
         with open(c, 'r') as f:
             config_data.append(yaml.safe_load(f))
-    platforms = config_data[0]["platforms"]
+
+    platform_key = args.platform.lower()
+    configs = []
+    for idx, conf in enumerate(config_data):
+        platforms = conf.get("platforms", {})
+        if platform_key not in platforms:
+            raise ValueError(f"Platform '{platform_key}' not found in config file: {args.config[idx]}")
+        configs.append(platforms[platform_key])
 
     logging.info(f"Fetching data from platform: {args.platform}")
-    match args.platform.lower():
+    match platform_key:
         case "grand_challenge":
-            config = platforms["grand_challenge"]
             platform = GrandChallenge()
             api_data = platform.gather_data(f"/{args.slug}")
         case _:
-            raise ValueError(f"Unsupported platform: {args.platform}. Pick from: {', '.join(platforms.keys())}")
+            available = list(config_data[0].get("platforms", {}).keys())
+            raise ValueError(f"Unsupported platform: {args.platform}. Pick from: {', '.join(available)}")
 
-    data = MetadataRecord.create_metadata_schema_instance(configs=config, api_data=api_data)
+    data = MetadataRecord.create_metadata_schema_instance(configs=configs, api_data=api_data)
     logging.info("Validating relaxed metadata schema")
     data.validate()
     MetadataRecord.transform_schema(data)

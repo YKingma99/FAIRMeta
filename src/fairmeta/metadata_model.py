@@ -164,7 +164,7 @@ class MetadataRecord(BaseModel):
                     "status": statuses,
                     "frequency": frequencies,
                 }
-                transformer_backed = {"format", "language", "legal_basis", "personal_data", "purpose"}
+                transformer_backed = ["format", "language", "legal_basis", "personal_data", "purpose"]
 
                 if field_name in dict_backed:
                     kind = dict_backed[field_name]

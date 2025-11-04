@@ -29,30 +29,30 @@ class RadboudFDP:
             self.post_url = self.base_url
         
 
-    def create_and_publish(self, FDP: MetadataRecord, catalog_name: str):
-        """Uploads an FDP object to Radboud FDP"""
+    def create_and_publish(self, metadata_record: MetadataRecord, catalog_name: str):
+        """Uploads a MetadataRecord object to Radboud FDP"""
         disallowed_fields = {"distribution", "dataset"}
-        filtered_fields = {k: v for k, v in vars(FDP.catalog).items() if k not in disallowed_fields and v is not None}
+        filtered_fields = {k: v for k, v in vars(metadata_record.catalog).items() if k not in disallowed_fields and v is not None}
         catalog = FDPCatalog(
             is_part_of=[URIRef(self.base_url)],
             dataset = [],
             **filtered_fields
         )
-        fdp_catalog_record = catalog.to_graph(URIRef(f"{self.post_url}/catalog/{catalog_name}"))
-        fdp_catalog_turtle = fdp_catalog_record.serialize(format="turtle")
-        fdp_catalog_url = self._post(fdp_catalog_turtle, "catalog")
+        metadata_catalog_record = catalog.to_graph(URIRef(f"{self.post_url}/catalog/{catalog_name}"))
+        metadata_catalog_turtle = metadata_catalog_record.serialize(format="turtle")
+        metadata_catalog_url = self._post(metadata_catalog_turtle, "catalog")
 
-        for dataset in FDP.catalog.dataset:
+        for dataset in metadata_record.catalog.dataset:
             filtered_fields = {k: v for k, v in vars(dataset).items() if k not in disallowed_fields and v is not None}
             hri_dataset = HRIDataset(
                 **filtered_fields
             )
-            fdp_dataset_record = hri_dataset.to_graph(subject=URIRef(hri_dataset.identifier))
-            fdp_dataset_record.add((URIRef(hri_dataset.identifier), DCTERMS.isPartOf, URIRef(fdp_catalog_url)))
-            fdp_dataset_turtle = fdp_dataset_record.serialize(format="turtle")
-            fdp_dataset_url = self._post(fdp_dataset_turtle, "dataset")
+            metadata_dataset_record = hri_dataset.to_graph(subject=URIRef(hri_dataset.identifier))
+            metadata_dataset_record.add((URIRef(hri_dataset.identifier), DCTERMS.isPartOf, URIRef(metadata_catalog_url)))
+            metadata_dataset_turtle = metadata_dataset_record.serialize(format="turtle")
+            metadata_dataset_url = self._post(metadata_dataset_turtle, "dataset")
 
-            self._publish(fdp_dataset_url)
+            self._publish(metadata_dataset_url)
 
             # # Cannot test this right now due to SHACLes on radboud FDP
             # for distribution in dataset:
@@ -62,14 +62,45 @@ class RadboudFDP:
             #     )
             #     access_url_str = str(hri_distribution.access_url)
             #     distribution_uri = URIRef(f"{hri_dataset.identifier}/distribution/{access_url_str.split('/')[-1]}")
-            #     fdp_distribution_record = hri_distribution.to_graph(subject=distribution_uri)
-            #     fdp_distribution_record.add((distribution_uri, DCTERMS.isPartOf, URIRef(f"{fdp_dataset_url}")))
-            #     fdp_distribution_turtle = fdp_distribution_record.serialize(format="turtle")
+            #     metadata_distribution_record = hri_distribution.to_graph(subject=distribution_uri)
+            #     metadata_distribution_record.add((distribution_uri, DCTERMS.isPartOf, URIRef(f"{metadata_dataset_url}")))
+            #     metadata_distribution_turtle = metadata_distribution_record.serialize(format="turtle")
 
-            #     fdp_distribution_url = self._post(fdp_distribution_turtle, "distribution")
-            #     self._publish(fdp_distribution_url)
+            #     metadata_distribution_url = self._post(metadata_distribution_turtle, "distribution")
+            #     self._publish(metadata_distribution_url)
 
-        self._publish(fdp_catalog_url)
+        self._publish(metadata_catalog_url)
+
+
+    def update(self, target: str, metadata_record: MetadataRecord, url: str, pointer_url):
+        disallowed_fields = {"distribution", "dataset"}            
+        match target:
+            case "catalog":
+                filtered_fields = {k: v for k, v in vars(metadata_record).items() if k not in disallowed_fields and v is not None}
+                catalog = FDPCatalog(
+                    is_part_of=[URIRef(self.base_url)],
+                    dataset = [pointer_url],
+                    **filtered_fields
+                )
+                metadata_catalog_record = catalog.to_graph(URIRef(url))
+                metadata_catalog_turtle = metadata_catalog_record.serialize(format="turtle")
+                rsp = self._put(metadata_catalog_turtle, url)
+
+            case "dataset":
+                filtered_fields = {k: v for k, v in vars(metadata_record).items() if k not in disallowed_fields and v is not None}
+                hri_dataset = HRIDataset(
+                    **filtered_fields
+                )
+                metadata_dataset_record = hri_dataset.to_graph(subject=URIRef(url))
+                metadata_dataset_record.add((URIRef(url), DCTERMS.isPartOf, URIRef(pointer_url)))
+                metadata_dataset_turtle = metadata_dataset_record.serialize(format="turtle")
+                rsp = self._put(metadata_dataset_turtle, url)
+
+            case _:
+                raise ValueError(f"Target: {target} invalid")
+
+        logging.info(f"Updating: {target}, response (should be 200): {rsp}")
+        return rsp
 
 
     def _post(self, turtle, location) -> str:
@@ -103,42 +134,21 @@ class RadboudFDP:
         rsp.raise_for_status()
         logging.info(f"Published, this should be 200: {rsp}")
 
-
-    def update_catalog(self, metadata_record: MetadataRecord, url):
-        graph_url = url
+    
+    def _put(self, turtle, url):
         if self.test:
             parsed = urlparse(url)
             new_path = "/acc" + parsed.path
             url = urlunparse(parsed._replace(path=new_path))
 
         headers = {
-            'Authorization': f'Bearer {self.FDP_key}',
-            'Content-Type': 'text/turtle'
-        }
-
-        current = requests.get(url, headers={'Accept': 'text/turtle'})
-        current.raise_for_status()
-
-        g = Graph()
-        g.parse(data=current.text, format='turtle')
-        dataset = []
-        for _, p, o in g:
-            if "http://www.w3.org/ns/dcat#dataset" in p:
-                dataset.append(o)
+                'Authorization': f'Bearer {self.FDP_key}',
+                'Accept': 'text/turtle',
+                'Content-Type': 'text/turtle'
+            }
         
-        FDP = metadata_record
-        disallowed_fields = {"distribution", "dataset"}
-        filtered_fields = {k: v for k, v in vars(FDP.catalog).items() if k not in disallowed_fields and v is not None}
-        catalog = FDPCatalog(
-            is_part_of=[URIRef(self.base_url)],
-            dataset = [],
-            **filtered_fields
-        )
-
-        catalog.dataset = dataset
-        record = catalog.to_graph(URIRef(f"{graph_url}"))
-        turtle = record.serialize(format="turtle")
-
-        rsp = requests.put(url, headers=headers, data=turtle, allow_redirects=True)
+        rsp = requests.put(url, headers=headers, data=turtle)
         rsp.raise_for_status()
-        logging.info(f"Updating: catalog, response (should be 200): {rsp}")
+        return rsp
+
+    
