@@ -86,7 +86,7 @@ def config(request):
                         "description": ["Description of the distribution", "Description in another language"],
                         "documentation": "https://documentation.com",
                         "download_url": "https://google.com",
-                        "language": ["Eng", "ned"],
+                        "language": ["Eng", "nld"],
                         "media_type": "https://www.iana.org/assignments/media-types/text/csv",
                         "modification_date": datetime.now(),
                         "packaging_format": "https://package_information.com",
@@ -99,7 +99,7 @@ def config(request):
                     "purpose": "https://purpose.com",
                     "geographical_coverage": "https://nijmegen.nl",
                     "is_referenced_by": "https://doi.org",
-                    "language": "ned",
+                    "language": "nld",
                     "legal_basis": "InformedConsent",
                     "maximum_typical_age": 55,
                     "minimum_typical_age": 29,
@@ -136,3 +136,19 @@ def api_data():
         "distribution_size": 489,
         "distribution_format": "http://publications.europa.eu/resource/authority/file-type/PDF"
     }
+
+@pytest.fixture
+def extra_config():
+    config = {
+        "catalog": {
+            "dataset": {
+                "keyword": ["CT", "Prostate"],
+                "maximum_typical_age": 999,
+                "minimum_typical_age": 1,
+                "distribution": {
+                    "byte_size": 69
+                }
+            }
+        }
+    }
+    return config

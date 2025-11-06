@@ -57,15 +57,6 @@ class Distribution(BaseModel):
     temporal_resolution: Optional[str] = None
     title: Optional[str | List[str]] = None
 
-    # # To appease the acceptance shacles
-    # # Version not allowed in distribution, so can't test this on acceptance since shacl expects version
-    # title: List[LiteralField] =[
-    #     LiteralField(value="CSV-distribution of the questionnaire data of the Personalised RISk-based MAmmascreening Study (PRISMA)")
-    # ]
-    # media_type: str = URIRef("https://www.iana.org/assignments/media-types/text/csv")
-    # description: LiteralField= [LiteralField(value="CSV file containing the questionnaire data of the PRISMA study")]
-    # # version: str = "-1"
-    # publisher: Agent | HRIAgent
 
 class Dataset(BaseModel):
     title: str | List[str]
@@ -74,13 +65,10 @@ class Dataset(BaseModel):
     contact_point: Kind | HRIVCard
     creator: Agent | HRIAgent | List[Agent | HRIAgent]
     identifier: str
-    keyword: List[str]
+    keyword: List[str] = []
     publisher: Agent | HRIAgent
     theme: str | DatasetTheme | List[str | DatasetTheme]
     applicable_legislation: AnyHttpUrl | List[AnyHttpUrl]
-
-    # RELEASE ME FROM THESE SHACLES
-    version: str = "-1"
 
     analytics: Optional[Distribution | List[Distribution]] = None
     code_values: Optional[AnyHttpUrl | List[AnyHttpUrl]] = None
@@ -143,6 +131,3 @@ class Catalog(BaseModel):
     temporal_coverage: Optional[PeriodOfTime] = None
     # Unclear:
     # themes: Optional[str | List[str]] = None
-
-    # Ariana says I'd rather be tied up with cuffs and not strings. She hasn't heard about shacles yet
-    version: str = "-1"

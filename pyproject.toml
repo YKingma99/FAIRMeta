@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fairmeta"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
     "dotenv",
     "gcapi",
@@ -40,7 +40,7 @@ tests = [
 Homepage = "https://github.com/YKingma99/FAIRMeta"
 Issues = "https://github.com/YKingma99/FAIRMeta/issues"
 
-[tool.hatch.build]
+[tool.hatch.build.targets.wheel]
 packages = ["src/fairmeta"]
 
 [project.scripts]

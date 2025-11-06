@@ -1,7 +1,7 @@
 # FAIRMeta
-FAIRMeta module.
+FAIRMeta package.
 
 ## Usage:
 ```shell
-fairmeta config.yaml platform identifier name_in_fdp
+fairmeta [--test] -c config.yaml platform identifier name_in_fdp
 ```

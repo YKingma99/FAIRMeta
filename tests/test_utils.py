@@ -58,15 +58,17 @@ def resolve_path(obj, path, target, config):
         case _:
             raise ValueError
 
-def adapted_instance(target, config, api_data, path, value):
+def adapted_instance(target, config, api_data, path, value, extra_config=None):
     """Changes a field in config or api_data and creates an FDPBase with that"""
     match target:
         case "config":
             adapted_data = deepcopy(config) 
         case "api_data":
             adapted_data = deepcopy(api_data) 
+        case "multi_conf":
+            return MetadataRecord.create_metadata_schema_instance([config, extra_config], api_data)
         case _:
-            return MetadataRecord.create_metadata_schema_instance(config, api_data)
+            return MetadataRecord.create_metadata_schema_instance([config], api_data)
     
     d = adapted_data
     for key in path[:-1]:
@@ -74,9 +76,9 @@ def adapted_instance(target, config, api_data, path, value):
     d[path[-1]] = value
     
     if target == "config":
-        return MetadataRecord.create_metadata_schema_instance(adapted_data, api_data)
+        return MetadataRecord.create_metadata_schema_instance([adapted_data], api_data)
     else:
-        return MetadataRecord.create_metadata_schema_instance(config, adapted_data)
+        return MetadataRecord.create_metadata_schema_instance([config], adapted_data)
 
 def is_list_field(model: MetadataRecord, path):
     """Helper function to decide if a field should be a list"""

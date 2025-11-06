@@ -208,3 +208,4 @@ __marimo__/
 
 # Files to ignore
 config.yaml
+extra_config.yaml

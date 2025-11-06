@@ -1,12 +1,13 @@
 import os
-from dotenv import load_dotenv
 import gcapi
 from urllib.parse import quote
 
 class GrandChallenge:
-    def __init__(self):
-        load_dotenv()
-        self.client = gcapi.Client(token=os.getenv("GC_key"))
+    def __init__(self, token=None):
+        if token:
+            self.client = gcapi.Client(token=token)
+        else:
+            self.client = gcapi.Client(token=os.getenv("GC_key"))
 
     def gather_data(self, slug) -> dict:
         """Gathers data from challenges and archives based on their slug and combines them in a dictionary"""
