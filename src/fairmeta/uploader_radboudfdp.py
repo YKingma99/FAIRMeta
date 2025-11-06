@@ -52,10 +52,9 @@ class RadboudFDP:
             metadata_dataset_turtle = metadata_dataset_record.serialize(format="turtle")
             metadata_dataset_url = self._post(metadata_dataset_turtle, "dataset")
 
-            self._publish(metadata_dataset_url)
-
-            # # Cannot test this right now due to SHACLes on radboud FDP
-            # for distribution in dataset:
+            # Cannot test this due to SHACLs: byteSize gives DatatypeConstraintComponent* and title gives MinCountConstraintComponent (Even though it is not mandatory)
+            # in SeMPyRO, byteSize is xsd:integer, I think defining it as xsd:nonnegativeinteger would immediately solve this problem.
+            # for distribution in dataset.distribution:
             #     filtered_fields = {k: v for k, v in vars(distribution).items() if k not in disallowed_fields and v is not None}
             #     hri_distribution = HRIDistribution(
             #         **filtered_fields
@@ -68,6 +67,8 @@ class RadboudFDP:
 
             #     metadata_distribution_url = self._post(metadata_distribution_turtle, "distribution")
             #     self._publish(metadata_distribution_url)
+
+            self._publish(metadata_dataset_url)
 
         self._publish(metadata_catalog_url)
 
