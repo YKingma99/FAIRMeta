@@ -104,7 +104,7 @@ class Dataset(BaseModel):
     temporal_coverage: Optional[PeriodOfTime | List[PeriodOfTime]] = None
     temporal_resolution: Optional[str] = None
     type: Optional[AnyHttpUrl | List[AnyHttpUrl]] = None # Controlled vocabulary
-    # version: Optional[str] = None
+    version: Optional[str] = None
     version_notes: Optional[str | List[str]] = None
     was_generated_by: Optional[AnyHttpUrl | Activity | List[AnyHttpUrl | Activity]] = None
 
