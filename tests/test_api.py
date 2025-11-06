@@ -5,6 +5,9 @@ from gcapi import Client
 import test_utils
 from fairmeta import metadata_model
 import requests
+import random
+import string
+from rdflib import Graph
 
 @pytest.mark.parametrize("slug,status_code,exception",[("LUNA16", 200, None),
                                                        ("weird", 404, HTTPStatusError)])
@@ -74,5 +77,29 @@ def test_FDP_post_and_publish(FDP, config, api_data):
 
     FDP.delete(urls[0], confirm=False) # The first URL is the catalog url. Deleting this one deletes all items in the catalog
 
-def test_FDP_update(FDP):
-    pass
+# @pytest.mark.parametrize("target, url", [("catalog", "http://localhost:8080/catalog/953d4e65-6ed7-489d-9745-f8f42811d9df"),
+#                                          ("dataset", "http://localhost:8080/dataset/14069853-68a6-496d-85ee-d17cc53bf9ab")])
+def test_FDP_update(FDP, config, api_data):
+    catalog_url = "http://localhost:8080/catalog/953d4e65-6ed7-489d-9745-f8f42811d9df"
+    dataset_url = "http://localhost:8080/dataset/14069853-68a6-496d-85ee-d17cc53bf9ab"
+    schema = test_utils.adapted_instance(None, config, api_data, None, None)
+    
+    letters = string.ascii_lowercase
+    catalog_string = ''.join(random.choice(letters) for _ in range(25))
+    dataset_string = ''.join(random.choice(letters) for _ in range(25))
+
+    schema.catalog.description = catalog_string
+    schema.catalog.dataset.description = dataset_string
+
+    metadata_model.MetadataRecord.transform_schema(schema)
+    FDP.update("catalog", schema.catalog, catalog_url, dataset_url)
+    rsp = FDP.get(catalog_url)
+    assert catalog_string in rsp.text
+
+    FDP.update("dataset", schema.catalog.dataset[0], dataset_url, catalog_url)
+    rsp = FDP.get(dataset_url)
+    assert dataset_string in rsp.text
+
+
+
+    

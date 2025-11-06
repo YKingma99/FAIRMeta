@@ -27,7 +27,15 @@ class RadboudFDP:
             self.post_url = "https://fdp.radboudumc.nl/acc"
         else:
             self.post_url = self.base_url
-        
+
+    def get(self, url):
+        headers = {
+            'Authorization': f'Bearer {self.FDP_key}',
+        }
+        rsp = requests.get(url, headers=headers)
+        self._check_response(rsp, action="GET")
+        return rsp
+    
 
     def create_and_publish(self, metadata_record: MetadataRecord, catalog_name: str) -> list[str]:
         """Uploads a MetadataRecord object to Radboud FDP and returns url's"""
