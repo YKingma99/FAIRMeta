@@ -2,6 +2,9 @@ import pytest
 from fairmeta.gatherers.gather_GC import GrandChallenge
 from httpx import HTTPStatusError, Request, Response
 from gcapi import Client
+import test_utils
+from fairmeta import metadata_model
+import requests
 
 @pytest.mark.parametrize("slug,status_code,exception",[("LUNA16", 200, None),
                                                        ("weird", 404, HTTPStatusError)])
@@ -56,3 +59,20 @@ def test_gather_gc_data(monkeypatch, slug, status_code, exception):
         assert calls[0][0].endswith(f"/challenges/{slug}"), f"Unexpected ending: {calls[0][0]}"
         assert isinstance(archive_data, dict)
         assert archive_data.get("name") == slug
+
+
+# @pytest.mark.parametrize()
+def test_FDP_post_and_publish(FDP, config, api_data):
+    schema = test_utils.adapted_instance(None, config, api_data, None, None)
+    metadata_model.MetadataRecord.transform_schema(schema)
+    catalog_name = "test_catalog"
+    urls = FDP.create_and_publish(schema, catalog_name)
+
+    for url in urls:
+        rsp = requests.get(url)
+        assert rsp.status_code == 200
+
+    FDP.delete(urls[0], confirm=False) # The first URL is the catalog url. Deleting this one deletes all items in the catalog
+
+def test_FDP_update(FDP):
+    pass

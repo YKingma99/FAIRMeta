@@ -1,6 +1,6 @@
 from __future__ import annotations
-from datetime import datetime
-from pydantic import BaseModel, AnyHttpUrl, AnyUrl
+from datetime import date, datetime
+from pydantic import BaseModel, AnyHttpUrl, AnyUrl, AwareDatetime, NaiveDatetime
 from sempyro.dcat import AccessRights
 from sempyro.geo import Location
 from sempyro.hri_dcat import HRIVCard, HRIAgent, DatasetTheme, DatasetStatus, DistributionStatus
@@ -86,7 +86,7 @@ class Dataset(BaseModel):
     legal_basis: Optional[str | AnyHttpUrl | List[str | AnyHttpUrl]] = None
     maximum_typical_age: Optional[int] = None
     minimum_typical_age: Optional[int] = None
-    modification_date: Optional[str | datetime] = None
+    modification_date: Optional[str | AwareDatetime | NaiveDatetime | date] = None
     number_of_records: Optional[int] = None
     number_of_unique_individuals: Optional[int] = None
     # other_identifier: Optional[Identifier | List[Identifier]] = None

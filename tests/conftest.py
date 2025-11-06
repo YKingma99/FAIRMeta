@@ -1,6 +1,12 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, date, timezone, timedelta
 from test_utils import extend_dict
+from fairmeta import RadboudFDP
+from dotenv import load_dotenv
+import os
+import isodate
+
+load_dotenv()
 
 @pytest.fixture(params=["minimal", "full"])
 def config(request):
@@ -72,8 +78,8 @@ def config(request):
                 "homepage": "https://homepage.org",
                 "language": "eng",
                 "license": "cc0",
-                "modification_date": datetime.now(),
-                "release_date": datetime.now(),
+                "modification_date": datetime.now(timezone.utc),
+                "release_date": datetime.now(timezone.utc),
                 "rights": "https://www.websitewithfreetextrights.com",
                 # "temporal_coverage": PeriodOfTime(start_date=datetime.now(), end_date=datetime.now()),
                 "dataset": {
@@ -88,11 +94,11 @@ def config(request):
                         "download_url": "https://google.com",
                         "language": ["Eng", "nld"],
                         "media_type": "https://www.iana.org/assignments/media-types/text/csv",
-                        "modification_date": datetime.now(),
+                        "modification_date": datetime.now(timezone.utc),
                         "packaging_format": "https://package_information.com",
-                        "release_date": datetime.now(),
+                        "release_date": datetime.now(timezone.utc),
                         "status": "completed",
-                        "temporal_resolution": "3",
+                        "temporal_resolution": str(timedelta(days=1)),
                         "title": ["title of distribution"]
                     },
                     "frequency": "daily",
@@ -103,14 +109,14 @@ def config(request):
                     "legal_basis": "InformedConsent",
                     "maximum_typical_age": 55,
                     "minimum_typical_age": 29,
-                    "modification_date": datetime.now(),
+                    "modification_date": datetime.now(timezone.utc),
                     "number_of_records": 99,
                     "number_of_unique_individuals": 88,
                     "personal_data": "https://w3id.org/dpv/pd#Household",
                     "population_coverage": "Adults aged 18–65 diagnosed with type 2 diabetes in the Netherlands between 2015 and 2020",
                     "purpose": "https://w3id.org/dpv#CustomerManagement",
-                    "release_date": datetime.now(),
-                    "temporal_resolution": "3",
+                    "release_date": datetime.now(timezone.utc),
+                    "temporal_resolution": isodate.duration_isoformat(timedelta(days=1)),
                     "type": "https://www.type.nl",
                     "status": "withdrawn",
                     "version": "1",
@@ -130,7 +136,7 @@ def api_data():
         "challenge_title": "Title given by challenge",
         "archive_description": "Description given by archive",
         "archive_title": "Title given by archive",
-        "challenge_url": "url of the challenge",
+        "challenge_url": "https://challenge.org/slug",
         "challenge_keywords": ["Medical", "keyword2"],
         "distribution_access_url": "https://testing.com/dist1",
         "distribution_size": 489,
@@ -152,3 +158,12 @@ def extra_config():
         }
     }
     return config
+
+@pytest.fixture
+def FDP():
+    local_url = "http://localhost:8080"
+    FDP = RadboudFDP(token=os.getenv("local_test_FDP_key"))
+    FDP.base_url = local_url
+    FDP.post_url = local_url
+    return FDP
+    
